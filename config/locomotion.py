@@ -18,6 +18,64 @@ args_to_watch = [
 logbase = 'logs'
 
 base = {
+    'diffusion_libero':{
+        ## model
+        'model': 'models.TemporalUnet',
+        'diffusion': 'models.GaussianDiffusion',
+        'horizon': 32,
+        'n_diffusion_steps': 20,
+        'action_weight': 10,
+        'loss_weights': None,
+        'loss_discount': 1,
+        'predict_epsilon': False,
+        'dim_mults': (1, 2, 4, 8),
+        'attention': False,
+        'renderer': 'utils.MuJoCoRenderer',
+
+        ## dataset
+        'loader': 'datasets.LiberoDataset',
+        'normalizer': 'GaussianNormalizer',
+        'preprocess_fns': [],
+        'clip_denoised': False,
+        'use_padding': True,
+        'max_path_length': 1000,
+        'task_order_index': 0,
+        'n_tasks': 22,
+        'dataset_folder': "/home/xshan/planning/libero/datasets",
+        'obs_modality': {
+            'rgb': ['agentview_rgb', 'eye_in_hand_rgb'],
+            'depth': [],
+            'low_dim': ['gripper_states', 'joint_states']
+        },
+        'task_embedding_format': 'bert',
+        'data_max_word_len': 25,
+        "task_embedding_one_hot_offset": None,
+        'max_n_episodes': None,
+        'termination_penalty': None,
+        'seed': None,
+
+        ## serialization
+        'logbase': logbase,
+        'prefix': 'diffusion/defaults',
+        'exp_name': watch(args_to_watch),
+
+        ## training
+        'n_steps_per_epoch': 10000,
+        'loss_type': 'l2',
+        'n_train_steps': 1e6,
+        'batch_size': 32,
+        'learning_rate': 2e-4,
+        'gradient_accumulate_every': 2,
+        'ema_decay': 0.995,
+        'save_freq': 20000,
+        'sample_freq': 20000,
+        'n_saves': 5,
+        'save_parallel': False,
+        'n_reference': 8,
+        'bucket': None,
+        'device': 'cuda',
+        'seed': None,
+    },
     'diffusion': {
         ## model
         'model': 'models.TemporalUnet',

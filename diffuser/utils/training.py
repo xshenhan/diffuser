@@ -4,6 +4,8 @@ import numpy as np
 import torch
 import einops
 import pdb
+import robomimic.utils.tensor_utils as TensorUtils
+import wandb
 
 from .arrays import batch_to_device, to_np, to_device, apply_dict
 from .timer import Timer
@@ -52,6 +54,7 @@ class Trainer(object):
         results_folder='./results',
         n_reference=8,
         bucket=None,
+        libero=False,
     ):
         super().__init__()
         self.model = diffusion_model
@@ -82,6 +85,7 @@ class Trainer(object):
         self.logdir = results_folder
         self.bucket = bucket
         self.n_reference = n_reference
+        self.libero = libero
 
         self.reset_parameters()
         self.step = 0
@@ -105,12 +109,17 @@ class Trainer(object):
         for step in range(n_train_steps):
             for i in range(self.gradient_accumulate_every):
                 batch = next(self.dataloader)
-                batch = batch_to_device(batch)
-
-                loss, infos = self.model.loss(*batch)
+                if isinstance(batch, dict):
+                    batch = TensorUtils.to_device(batch, device=self.model.device)
+                    loss, infos = self.model.loss(batch)
+                else:
+                    batch = batch_to_device(batch)
+                    loss, infos = self.model.loss(*batch)
                 loss = loss / self.gradient_accumulate_every
                 loss.backward()
-
+            wandb_to_log = {
+                "loss": loss.item(),
+            }
             self.optimizer.step()
             self.optimizer.zero_grad()
 
@@ -122,15 +131,17 @@ class Trainer(object):
                 self.save(label)
 
             if self.step % self.log_freq == 0:
-                infos_str = ' | '.join([f'{key}: {val:8.4f}' for key, val in infos.items()])
+                infos_str = ' | '.join([f'{key}: {val:8.8f}' for key, val in infos.items()])
                 print(f'{self.step}: {loss:8.4f} | {infos_str} | t: {timer():8.4f}', flush=True)
+                wandb_to_log.update(infos)
 
-            if self.step == 0 and self.sample_freq:
+            if self.step == 0 and self.sample_freq and not self.libero:
                 self.render_reference(self.n_reference)
 
-            if self.sample_freq and self.step % self.sample_freq == 0:
+            if self.sample_freq and self.step % self.sample_freq == 0 and not self.libero:
                 self.render_samples()
 
+            wandb.log(wandb_to_log)
             self.step += 1
 
     def save(self, epoch):

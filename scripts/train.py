@@ -8,24 +8,52 @@ import diffuser.utils as utils
 class Parser(utils.Parser):
     dataset: str = 'hopper-medium-expert-v2'
     config: str = 'config.locomotion'
+    dataset_type: str = 'd4rl'
+
+
 
 args = Parser().parse_args('diffusion')
-
 
 #-----------------------------------------------------------------------------#
 #---------------------------------- dataset ----------------------------------#
 #-----------------------------------------------------------------------------#
 
-dataset_config = utils.Config(
-    args.loader,
-    savepath=(args.savepath, 'dataset_config.pkl'),
-    env=args.dataset,
-    horizon=args.horizon,
-    normalizer=args.normalizer,
-    preprocess_fns=args.preprocess_fns,
-    use_padding=args.use_padding,
-    max_path_length=args.max_path_length,
-)
+if hasattr(args, 'dataset_type') and args.dataset_type == 'libero':
+    dataset_config = utils.Config(
+        "datasets.LiberoDataset",
+        savepath=(args.savepath, 'dataset_config.pkl'),
+        benchmark_name=args.dataset,
+        task_order_index=args.task_order_index,
+        horizon=args.horizon,
+        n_tasks=args.n_tasks,
+        dataset_folder=args.dataset_folder,
+        obs_modality=args.obs_modality,
+        normalizer=args.normalizer,
+        preprocess_fns=args.preprocess_fns,
+        use_padding=args.use_padding,
+        max_path_length=args.max_path_length,
+        task_embedding_format=args.task_embedding_format,
+        task_embedding_one_hot_offset=args.task_embedding_one_hot_offset,
+        data_max_word_len=args.data_max_word_len,
+        max_n_episodes=args.max_n_episodes,
+        termination_penalty=args.termination_penalty,
+        seed=args.seed,
+    )
+    dataset = dataset_config()
+    print("Dataset initialized")
+    exit()
+
+else:
+    dataset_config = utils.Config(
+        args.loader,
+        savepath=(args.savepath, 'dataset_config.pkl'),
+        env=args.dataset,
+        horizon=args.horizon,
+        normalizer=args.normalizer,
+        preprocess_fns=args.preprocess_fns,
+        use_padding=args.use_padding,
+        max_path_length=args.max_path_length,
+    )
 
 render_config = utils.Config(
     args.renderer,

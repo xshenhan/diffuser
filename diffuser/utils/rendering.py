@@ -236,6 +236,74 @@ class MuJoCoRenderer:
     def __call__(self, *args, **kwargs):
         return self.renders(*args, **kwargs)
 
+
+class EmptyRenderer:
+    '''
+    空渲染器，实现与 MuJoCoRenderer 相似的接口但返回空图像
+    用于不需要实际渲染或无法使用 MuJoCo 渲染器的情况
+    '''
+
+    def __init__(self, env):
+        pass
+
+    def pad_observation(self, observation):
+        state = np.concatenate([
+            np.zeros(1),
+            observation,
+        ])
+        return state
+
+    def pad_observations(self, observations):
+        qpos_dim = self.env.sim.data.qpos.size
+        xvel_dim = qpos_dim - 1
+        xvel = observations[:, xvel_dim]
+        xpos = np.cumsum(xvel) * self.env.dt
+        states = np.concatenate([
+            xpos[:,None],
+            observations,
+        ], axis=-1)
+        return states
+
+    def render(self, observation, dim=256, partial=False, qvel=True, render_kwargs=None, conditions=None):
+        if type(dim) == int:
+            dim = (dim, dim)
+        return np.zeros((*dim, 3), np.uint8)
+
+    def _renders(self, observations, **kwargs):
+        if len(observations) == 0:
+            return np.array([])
+        img = self.render(observations[0], **kwargs)
+        return np.stack([img for _ in observations], axis=0)
+
+    def renders(self, samples, partial=False, **kwargs):
+        if partial:
+            samples = self.pad_observations(samples)
+        return self.render(samples[0], **kwargs)
+
+    def composite(self, savepath, paths, dim=(1024, 256), **kwargs):
+        img = np.zeros((*dim, 3), np.uint8)
+        if savepath is not None:
+            imageio.imsave(savepath, img)
+        return img
+
+    def render_rollout(self, savepath, states, **video_kwargs):
+        img = self.render(states[0])
+        if savepath is not None:
+            save_video(savepath, [img], **video_kwargs)
+
+    def render_plan(self, savepath, actions, observations_pred, state, fps=30):
+        img = self.render(state)
+        if savepath is not None:
+            save_videos(savepath, np.array([[img]]))
+
+    def render_diffusion(self, savepath, diffusion_path, **video_kwargs):
+        img = np.zeros((256, 256, 3), np.uint8)
+        if savepath is not None:
+            save_video(savepath, [img], **video_kwargs)
+
+    def __call__(self, *args, **kwargs):
+        return self.renders(*args, **kwargs)
+
 #-----------------------------------------------------------------------------#
 #---------------------------------- rollouts ---------------------------------#
 #-----------------------------------------------------------------------------#

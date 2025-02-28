@@ -1,0 +1,7 @@
+defaults:
+  - params: diffusion_libero.yaml
+
+params:
+  savepath: /home/xshan/planning/diffuser/logs
+  dataset: libero_spatial
+  single_task: true

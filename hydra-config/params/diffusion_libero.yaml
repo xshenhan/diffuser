@@ -1,0 +1,66 @@
+# model
+model: models.TemporalUnetImage
+diffusion: models.GaussianDiffusionImage
+horizon: 32
+n_diffusion_steps: 20
+action_weight: 10
+loss_weights: null
+loss_discount: 1
+predict_epsilon: false
+dim_mults: [1, 2, 4, 8]
+attention: false
+renderer: utils.EmptyRenderer
+image_encoder_config: 
+  _target_: diffuser.models.image_modules.AutoEncoder
+  hidden_dim: 256
+image_encoder_loss_weight: 1.0
+
+# dataset
+dataset_type: libero
+loader: datasets.LiberoDataset
+normalizer: GaussianNormalizer
+preprocess_fns: []
+clip_denoised: false
+use_padding: true
+max_path_length: 1000
+task_order_index: 0
+n_tasks: 22
+dataset_folder: /home/xshan/planning/libero/datasets
+obs_modality:
+  rgb: [agentview_rgb, eye_in_hand_rgb]
+  depth: []
+  low_dim: [gripper_states, joint_states]
+task_embedding_format: bert
+data_max_word_len: 25
+task_embedding_one_hot_offset: null
+max_n_episodes: null
+termination_penalty: null
+image_encoder: dinov2_vits14
+freeze_image_encoder: true
+
+# serialization
+# logbase: ${logbase}
+# prefix: diffusion/defaults
+# exp_name: ${exp_name}
+
+# training
+n_steps_per_epoch: 10000
+loss_type: l2
+n_train_steps: 1000000
+batch_size: 32
+learning_rate: 0.0002
+gradient_accumulate_every: 2
+ema_decay: 0.995
+save_freq: 20000
+sample_freq: 20000
+n_saves: 5
+save_parallel: false
+n_reference: 8
+bucket: null
+device: cuda
+seed: 0
+wandb:
+  project: libero
+  entity: hxs001
+  name: diffuser-origin-libero
+
