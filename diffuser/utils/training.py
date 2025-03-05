@@ -6,10 +6,12 @@ import einops
 import pdb
 import robomimic.utils.tensor_utils as TensorUtils
 import wandb
+import imageio.v3 as imageio
 
 from .arrays import batch_to_device, to_np, to_device, apply_dict
 from .timer import Timer
 from .cloud import sync_logs
+from .libero_eval import eval_one_task_success, get_diffusion_conditions, plan, navie_action_mse
 
 def cycle(dl):
     while True:
@@ -49,12 +51,14 @@ class Trainer(object):
         log_freq=100,
         sample_freq=1000,
         save_freq=1000,
-        label_freq=100000,
+        n_saves=5,
+        # label_freq=100000,
         save_parallel=False,
         results_folder='./results',
         n_reference=8,
         bucket=None,
         libero=False,
+        eval_cfg=None,
     ):
         super().__init__()
         self.model = diffusion_model
@@ -66,7 +70,8 @@ class Trainer(object):
         self.log_freq = log_freq
         self.sample_freq = sample_freq
         self.save_freq = save_freq
-        self.label_freq = label_freq
+        # self.label_freq = label_freq
+        self.n_saves = n_saves
         self.save_parallel = save_parallel
 
         self.batch_size = train_batch_size
@@ -86,6 +91,7 @@ class Trainer(object):
         self.bucket = bucket
         self.n_reference = n_reference
         self.libero = libero
+        self.eval_cfg = eval_cfg
 
         self.reset_parameters()
         self.step = 0
@@ -127,19 +133,48 @@ class Trainer(object):
                 self.step_ema()
 
             if self.step % self.save_freq == 0:
-                label = self.step // self.label_freq * self.label_freq
+                label = self.step
                 self.save(label)
 
             if self.step % self.log_freq == 0:
                 infos_str = ' | '.join([f'{key}: {val:8.8f}' for key, val in infos.items()])
+                if self.libero:
+                    eval_info = {
+                        "navie_action_mse": navie_action_mse(self.model, batch),
+                        "navie_action_mse_ema": navie_action_mse(self.ema_model, batch),
+                    }
+                    infos_str += f' | {eval_info}'
                 print(f'{self.step}: {loss:8.4f} | {infos_str} | t: {timer():8.4f}', flush=True)
                 wandb_to_log.update(infos)
+                if self.libero:
+                    wandb_to_log.update(eval_info)
 
             if self.step == 0 and self.sample_freq and not self.libero:
                 self.render_reference(self.n_reference)
 
-            if self.sample_freq and self.step % self.sample_freq == 0 and not self.libero:
-                self.render_samples()
+            if self.sample_freq and self.step % self.sample_freq == 0:
+                if self.libero:
+                    success_rate, info = eval_one_task_success(self.ema_model, self.dataset.benchmark.get_task(0), self.eval_cfg)
+                    wandb_to_log["ema_success_rate"] = success_rate
+                    images = info["images"]
+                    os.makedirs("./ema_eval_videos", exist_ok=True)
+                    for i, images_i in enumerate(images):
+                        for k,v in images_i.items():
+                            imageio.imwrite(f"./ema_eval_videos/{self.step}_step_{k}_video_{i}.mp4", v, fps=30)
+                    for k in images[0].keys():
+                        wandb_to_log[f"ema_eval_videos/{self.step}_step_{k}_video_0"] = wandb.Video(f"./ema_eval_videos/{self.step}_step_{k}_video_0.mp4")
+
+                    success_rate, info = eval_one_task_success(self.model, self.dataset.benchmark.get_task(0), self.eval_cfg)
+                    wandb_to_log["success_rate"] = success_rate
+                    images = info["images"]
+                    os.makedirs("./eval_videos", exist_ok=True)
+                    for i, images_i in enumerate(images):
+                        for k,v in images_i.items():
+                            imageio.imwrite(f"./eval_videos/{self.step}_step_{k}_video_{i}.mp4", v, fps=30)
+                    for k in images[0].keys():
+                        wandb_to_log[f"eval_videos/{self.step}_step_{k}_video_0"] = wandb.Video(f"./eval_videos/{self.step}_step_{k}_video_0.mp4")
+                else:
+                    self.render_samples()
 
             wandb.log(wandb_to_log)
             self.step += 1
@@ -159,6 +194,32 @@ class Trainer(object):
         print(f'[ utils/training ] Saved model to {savepath}', flush=True)
         if self.bucket is not None:
             sync_logs(self.logdir, bucket=self.bucket, background=self.save_parallel)
+        self.cleanup_old_checkpoints()  
+
+    def cleanup_old_checkpoints(self):
+        '''
+        只保留最新的self.n_saves个检查点文件
+        '''
+        checkpoints = []
+        for f in os.listdir(self.logdir):
+            if f.startswith('state_') and f.endswith('.pt'):
+                try:
+                    epoch = int(f.split('_')[1].split('.')[0])
+                    checkpoints.append((epoch, f))
+                except:
+                    continue
+                    
+        # 按epoch排序
+        checkpoints.sort(reverse=True)
+        if len(checkpoints) > self.n_saves:
+            # 删除旧的检查点
+            for epoch, f in checkpoints[self.n_saves:]:
+                path = os.path.join(self.logdir, f)
+                try:
+                    os.remove(path)
+                    print(f'[ utils/training ] Removed old checkpoint: {path}')
+                except:
+                    print(f'[ utils/training ] Failed to remove checkpoint: {path}')
 
     def load(self, epoch):
         '''

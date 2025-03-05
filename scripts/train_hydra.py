@@ -2,6 +2,7 @@ import diffuser.utils as utils
 import hydra
 import robomimic.utils.tensor_utils as TensorUtils
 import wandb
+import os
 
 #-----------------------------------------------------------------------------#
 #----------------------------------- setup -----------------------------------#
@@ -22,6 +23,7 @@ def get_observation_dim(shape_meta, hidden_dim):
 @hydra.main(version_base=None, config_path="../hydra-config", config_name="base")
 def main(config):
     args = config.params
+    os.makedirs(args.savepath, exist_ok=True)
     if hasattr(args, 'dataset_type') and args.dataset_type == 'libero':
         dataset_config = utils.Config(
             "datasets.LiberoDataset",
@@ -132,12 +134,14 @@ def main(config):
         ema_decay=args.ema_decay,
         sample_freq=args.sample_freq,
         save_freq=args.save_freq,
-        label_freq=int(args.n_train_steps // args.n_saves),
+        # label_freq=int(args.n_train_steps // args.n_saves),
+        n_saves=args.n_saves,
         save_parallel=args.save_parallel,
         results_folder=args.savepath,
         bucket=args.bucket,
         n_reference=args.n_reference,
         libero=args.dataset_type == 'libero',
+        eval_cfg=args.eval_config if args.dataset_type == 'libero' else None,
     )
 
     #-----------------------------------------------------------------------------#

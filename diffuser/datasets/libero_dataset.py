@@ -172,6 +172,7 @@ class LiberoDataset(torch.utils.data.Dataset):
         self.task_id = 0
         self.observation_dim = None
         self.action_dim = shape_meta["ac_dim"]
+        self.benchmark = benchmark
 
     def get_conditions(self, observations):
         '''

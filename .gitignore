@@ -144,3 +144,5 @@ dmypy.json
 .pyre/
 bert/
 outputs/
+eval_videos/
+eval_info.pkl

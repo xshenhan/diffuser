@@ -1,0 +1,25 @@
+output_dir: /home/xshan/planning/diffuser/outputs/2025-02-28/02-41-36/save_dir
+eval_config:
+  n_eval: 1
+  eval_every: 10
+  save_sim_states: false
+  use_mp: false
+  img_h: 128
+  img_w: 128
+  num_procs: 1
+  max_steps: 600
+  bddl_root_folder: "/home/xshan/planning/libero/LIBERO/libero/libero/bddl_files"
+  init_files_folder: "/home/xshan/planning/libero/LIBERO/libero/libero/init_files"
+  to_eval: false
+  batch_size: 4
+  num_workers: 2
+  modality:
+      rgb: ["agentview_rgb", "eye_in_hand_rgb"]
+      depth: []
+      low_dim: ["gripper_states", "joint_states"]
+  obs_key_mapping:
+    agentview_rgb: agentview_image
+    eye_in_hand_rgb: robot0_eye_in_hand_image
+    gripper_states: robot0_gripper_qpos
+    joint_states: robot0_joint_pos
+  query_freq: 4
