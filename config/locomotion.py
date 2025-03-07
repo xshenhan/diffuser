@@ -41,7 +41,7 @@ base = {
         'max_path_length': 1000,
         'task_order_index': 0,
         'n_tasks': 22,
-        'dataset_folder': "/home/xshan/planning/libero/datasets",
+        'dataset_folder': "/home/tiger/myplanlibero/datasets",
         'obs_modality': {
             'rgb': ['agentview_rgb', 'eye_in_hand_rgb'],
             'depth': [],

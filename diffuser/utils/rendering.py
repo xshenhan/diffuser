@@ -5,7 +5,6 @@ import imageio
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 import gym
-import mujoco_py as mjc
 import warnings
 import pdb
 
@@ -65,6 +64,7 @@ class MuJoCoRenderer:
         self.observation_dim = np.prod(self.env.observation_space.shape) - 1
         self.action_dim = np.prod(self.env.action_space.shape)
         try:
+            import mujoco_py as mjc
             self.viewer = mjc.MjRenderContextOffscreen(self.env.sim)
         except:
             print('[ utils/rendering ] Warning: could not initialize offscreen renderer')

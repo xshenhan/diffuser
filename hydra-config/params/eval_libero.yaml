@@ -1,4 +1,4 @@
-output_dir: /home/xshan/planning/diffuser/outputs/2025-02-28/02-41-36/save_dir
+output_dir: /home/tiger/myplandiffuser/outputs/2025-02-28/02-41-36/save_dir
 eval_config:
   n_eval: 1
   eval_every: 10
@@ -8,8 +8,8 @@ eval_config:
   img_w: 128
   num_procs: 1
   max_steps: 600
-  bddl_root_folder: "/home/xshan/planning/libero/LIBERO/libero/libero/bddl_files"
-  init_files_folder: "/home/xshan/planning/libero/LIBERO/libero/libero/init_files"
+  bddl_root_folder: "/home/tiger/myplanlibero/LIBERO/libero/libero/bddl_files"
+  init_files_folder: "/home/tiger/myplanlibero/LIBERO/libero/libero/init_files"
   to_eval: false
   batch_size: 4
   num_workers: 2

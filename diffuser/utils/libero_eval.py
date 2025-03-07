@@ -95,7 +95,8 @@ def eval_one_task_success(diffusion, task, eval_cfg: EvalConfigDiffuser, task_st
                 [lambda: OffScreenRenderEnv(**env_args)]
             )
             env_creation = True
-        except:
+        except Exception as e:
+            print(e)
             time.sleep(5)
             count += 1
     if count >= 5:

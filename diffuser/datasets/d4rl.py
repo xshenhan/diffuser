@@ -22,7 +22,10 @@ def suppress_output():
 
 with suppress_output():
     ## d4rl prints out a variety of warnings
-    import d4rl
+    try:
+        import d4rl
+    except Exception as e:
+        print("d4rl not installed, some funcs may not be able to use.")
 
 #-----------------------------------------------------------------------------#
 #-------------------------------- general api --------------------------------#

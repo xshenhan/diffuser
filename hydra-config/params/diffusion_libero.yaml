@@ -25,7 +25,7 @@ use_padding: true
 max_path_length: 1000
 task_order_index: 0
 n_tasks: 22
-dataset_folder: /home/xshan/planning/libero/datasets
+dataset_folder: /home/tiger/myplan/libero/datasets
 obs_modality:
   rgb: [agentview_rgb, eye_in_hand_rgb]
   depth: []
@@ -71,8 +71,8 @@ eval_config:
   img_w: 128
   num_procs: 1
   max_steps: 600
-  bddl_root_folder: "/home/xshan/planning/libero/LIBERO/libero/libero/bddl_files"
-  init_files_folder: "/home/xshan/planning/libero/LIBERO/libero/libero/init_files"
+  bddl_root_folder: "/home/tiger/myplan/libero/LIBERO/libero/libero/bddl_files"
+  init_files_folder: "/home/tiger/myplan/libero/LIBERO/libero/libero/init_files"
   to_eval: true
   batch_size: 4
   num_workers: 2
