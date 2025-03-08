@@ -2,6 +2,7 @@ import diffuser.utils as utils
 import hydra
 import robomimic.utils.tensor_utils as TensorUtils
 import wandb
+from diffuser.utils.lr_scheduler import get_scheduler
 import os
 
 #-----------------------------------------------------------------------------#
@@ -127,6 +128,8 @@ def main(config):
         device=args.device,
     )
 
+
+
     trainer_config = utils.Config(
         utils.Trainer,
         savepath=(args.savepath, 'trainer_config.pkl'),
@@ -151,8 +154,7 @@ def main(config):
 
     diffusion = diffusion_config(model)
 
-    trainer: utils.training.Trainer = trainer_config(diffusion, dataset, renderer)
-
+    trainer = trainer_config(diffusion, dataset, renderer)
 
     #-----------------------------------------------------------------------------#
     #------------------------ test forward & backward pass -----------------------#
@@ -173,12 +175,20 @@ def main(config):
         loss.backward()
     print('✓')
 
-
+    total_steps = args.n_epochs * len(dataset)
+    # scheduler
+    lr_scheduler = get_scheduler(
+        args.lr_scheduler,
+        trainer.optimizer,
+        num_warmup_steps=args.num_warmup_steps,
+        num_training_steps=total_steps,
+    )
+    trainer.lr_scheduler = lr_scheduler
     #-----------------------------------------------------------------------------#
     #--------------------------------- main loop ---------------------------------#
     #-----------------------------------------------------------------------------#
 
-    n_epochs = int(args.n_epochs)
+    n_epochs = args.n_epochs
 
     wandb.init(
         project=args.wandb.project,

@@ -13,6 +13,8 @@ from .timer import Timer
 from .cloud import sync_logs
 from .libero_eval import eval_one_task_success, get_diffusion_conditions, plan, navie_action_mse
 
+DEBUG = False
+
 def cycle(dl):
     while True:
         for data in dl:
@@ -45,13 +47,13 @@ class Trainer(object):
         ema_decay=0.995,
         train_batch_size=32,
         train_lr=2e-5,
-        gradient_accumulate_every=2,
         step_start_ema=2000,
         update_ema_every=10,
         log_freq=100,
         sample_freq=1000,
         save_freq=1000,
         n_saves=5,
+        train_dataset_workers=16,
         # label_freq=100000,
         save_parallel=False,
         results_folder='./results',
@@ -75,15 +77,15 @@ class Trainer(object):
         self.save_parallel = save_parallel
 
         self.batch_size = train_batch_size
-        self.gradient_accumulate_every = gradient_accumulate_every
 
         self.dataset = dataset
-        self.dataloader = cycle(torch.utils.data.DataLoader(
-            self.dataset, batch_size=train_batch_size, num_workers=1, shuffle=True, pin_memory=True
-        ))
-        self.dataloader_vis = cycle(torch.utils.data.DataLoader(
+        self.dataloader = torch.utils.data.DataLoader(
+            self.dataset, batch_size=train_batch_size, num_workers=train_dataset_workers, shuffle=True, pin_memory=True, 
+            prefetch_factor=2,
+        )
+        self.dataloader_vis = torch.utils.data.DataLoader(
             self.dataset, batch_size=1, num_workers=0, shuffle=True, pin_memory=True
-        ))
+        )
         self.renderer = renderer
         self.optimizer = torch.optim.Adam(diffusion_model.parameters(), lr=train_lr)
 
@@ -92,7 +94,7 @@ class Trainer(object):
         self.n_reference = n_reference
         self.libero = libero
         self.eval_cfg = eval_cfg
-
+        self.lr_scheduler = None
         self.reset_parameters()
         self.step = 0
 
@@ -109,24 +111,23 @@ class Trainer(object):
     #------------------------------------ api ------------------------------------#
     #-----------------------------------------------------------------------------#
 
-    def train(self, n_train_steps):
-
-        timer = Timer()
-        for step in range(n_train_steps):
-            for i in range(self.gradient_accumulate_every):
-                batch = next(self.dataloader)
-                if isinstance(batch, dict):
-                    batch = TensorUtils.to_device(batch, device=self.model.device)
-                    loss, infos = self.model.loss(batch)
-                else:
-                    batch = batch_to_device(batch)
-                    loss, infos = self.model.loss(*batch)
-                loss = loss / self.gradient_accumulate_every
-                loss.backward()
+    def train(self):
+        for batch in self.dataloader:
+            timer = Timer()
+            if isinstance(batch, dict):
+                batch = TensorUtils.to_device(batch, device=self.model.device)
+                loss, infos = self.model.loss(batch)
+            else:
+                batch = batch_to_device(batch)
+                loss, infos = self.model.loss(*batch)
+            loss.backward()
             wandb_to_log = {
                 "loss": loss.item(),
+                "lr": self.optimizer.param_groups[0]["lr"]
             }
             self.optimizer.step()
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
             self.optimizer.zero_grad()
 
             if self.step % self.update_ema_every == 0:
@@ -152,7 +153,7 @@ class Trainer(object):
             if self.step == 0 and self.sample_freq and not self.libero:
                 self.render_reference(self.n_reference)
 
-            if self.sample_freq and self.step % self.sample_freq == 0:
+            if self.sample_freq and self.step % self.sample_freq == 0 and (self.step != 0 or DEBUG):
                 if self.libero:
                     success_rate, info = eval_one_task_success(self.ema_model, self.dataset.benchmark.get_task(0), self.eval_cfg)
                     wandb_to_log["ema_success_rate"] = success_rate

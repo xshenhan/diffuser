@@ -485,3 +485,15 @@ class GaussianDiffusionImage(nn.Module):
 
     def forward(self, cond, *args, **kwargs):
         return self.conditional_sample(cond, *args, **kwargs)
+
+class GaussianDiffusionImageTaskEmb(GaussianDiffusionImage):
+    def __init__(self, model, horizon, observation_dim, action_dim, n_timesteps=1000,
+        loss_type='l1', clip_denoised=False, predict_epsilon=True, image_encoder_loss_weight=1.0,
+        action_weight=1.0, loss_discount=1.0, loss_weights=None,
+    ):
+        super(GaussianDiffusionImageTaskEmb, self).__init__(
+            model, horizon, observation_dim, action_dim, n_timesteps,
+            loss_type, clip_denoised, predict_epsilon, image_encoder_loss_weight,
+            action_weight, loss_discount, loss_weights,
+        )
+        

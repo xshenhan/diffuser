@@ -75,6 +75,10 @@ def raw_obs_to_tensor_obs(obs, cfg, obs_modality, obs_key_mapping, device="cuda"
 def eval_one_task_success(diffusion, task, eval_cfg: EvalConfigDiffuser, task_str="", device="cuda") -> Tuple[float, Dict]:
     num_eval = eval_cfg.n_eval
     query_freq = eval_cfg.query_freq
+    if not hasattr(eval_cfg, "num_procs"):
+        eval_cfg.num_procs = 1
+    env_num = min(eval_cfg.num_procs, eval_cfg.n_eval)
+    eval_loop_num = (eval_cfg.n_eval + env_num - 1) // env_num
 
     # initiate evaluation envs
     env_args = {
@@ -84,16 +88,21 @@ def eval_one_task_success(diffusion, task, eval_cfg: EvalConfigDiffuser, task_st
         "camera_heights": eval_cfg.img_h,
         "camera_widths": eval_cfg.img_w,
     }
-
+    
     # Try to handle the frame buffer issue
     env_creation = False
 
     count = 0
     while not env_creation and count < 5:
         try:
-            env = DummyVectorEnv(
-                [lambda: OffScreenRenderEnv(**env_args)]
-            )
+            if env_num == 1:
+                env = DummyVectorEnv(
+                    [lambda: OffScreenRenderEnv(**env_args) for _ in range(env_num)]
+                )
+            else:
+                env = SubprocVectorEnv(
+                    [lambda: OffScreenRenderEnv(**env_args) for _ in range(env_num)]
+                )
             env_creation = True
         except Exception as e:
             print(e)
@@ -110,15 +119,15 @@ def eval_one_task_success(diffusion, task, eval_cfg: EvalConfigDiffuser, task_st
     num_success = 0
     images = [{} for _ in range(num_eval)]
     sim_states = [[] for _ in range(num_eval)]
-    for i in tqdm.tqdm(range(num_eval), desc="Evaluating success rate"):
+    for i in tqdm.tqdm(range(eval_loop_num), desc="Evaluating success rate"):
         env.reset()
-        indices = np.arange(i, (i + 1)) % init_states.shape[0]
+        indices = np.arange(i * env_num, (i + 1) * env_num) % init_states.shape[0]
         init_states_ = init_states[indices]
-        dones = [False] 
+        dones = [False] * env_num
         steps = 0
         obs = env.set_init_state(init_states_)
         # dummy actions [env_num, 7] all zeros for initial physics simulation
-        dummy = np.zeros((1, 7))
+        dummy = np.zeros((env_num, 7))
         for _ in range(5):
             obs, _, _, _ = env.step(dummy)
         query_steps = 0
@@ -126,14 +135,14 @@ def eval_one_task_success(diffusion, task, eval_cfg: EvalConfigDiffuser, task_st
             steps += 1
 
             data = raw_obs_to_tensor_obs(obs, eval_cfg, eval_cfg.modality, eval_cfg.obs_key_mapping, device)
-            data = TensorUtils.to_batch(data)
+            data = TensorUtils.map_tensor(data, lambda x: x.unsqueeze_(1))
             
             # append_images
             for k,v in data["obs"].items():
                 if 'rgb' in k:
                     if k not in images[i]:
                         images[i][k] = []
-                    image = v.squeeze([0, 1])
+                    image = v[0, 0, ...]
                     images[i][k].append(einops.rearrange(image, 'c h w -> h w c'))
 
             with torch.inference_mode():
@@ -146,16 +155,22 @@ def eval_one_task_success(diffusion, task, eval_cfg: EvalConfigDiffuser, task_st
 
             # record the sim states for replay purpose
             sim_state = env.get_sim_state()
-            if i < eval_cfg.n_eval:
-                sim_states[i].append(sim_state)
+            for k in range(env_num):
+                if i * env_num + k < eval_cfg.n_eval and sim_states is not None:
+                    sim_states[i * env_num + k].append(sim_state[k])
 
             # check whether succeed
-            dones[0] = dones[0] or done[0]
+            for k in range(env_num):
+                dones[k] = dones[k] or done[k]
 
-            if dones[0]:
+            if all(dones):
                 break
-        if i < eval_cfg.n_eval:
-            num_success += int(dones[0])
+
+        # a new form of success record
+        for k in range(env_num):
+            if i * env_num + k < eval_cfg.n_eval:
+                num_success += int(dones[k])
+                
     success_rate = num_success / eval_cfg.n_eval
     env.close()
     images = TensorUtils.to_numpy(images)

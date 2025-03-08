@@ -2,7 +2,9 @@ import diffuser.utils as utils
 import hydra
 import robomimic.utils.tensor_utils as TensorUtils
 import wandb
+from diffuser.utils.lr_scheduler import get_scheduler
 import os
+from diffuser.algos.naive_algo import NavieLifelongAlgo
 
 #-----------------------------------------------------------------------------#
 #----------------------------------- setup -----------------------------------#
@@ -127,6 +129,8 @@ def main(config):
         device=args.device,
     )
 
+
+
     trainer_config = utils.Config(
         utils.Trainer,
         savepath=(args.savepath, 'trainer_config.pkl'),
@@ -151,8 +155,7 @@ def main(config):
 
     diffusion = diffusion_config(model)
 
-    trainer: utils.training.Trainer = trainer_config(diffusion, dataset, renderer)
-
+    trainer = trainer_config(diffusion, dataset, renderer)
 
     #-----------------------------------------------------------------------------#
     #------------------------ test forward & backward pass -----------------------#
@@ -173,12 +176,11 @@ def main(config):
         loss.backward()
     print('✓')
 
-
-    #-----------------------------------------------------------------------------#
-    #--------------------------------- main loop ---------------------------------#
-    #-----------------------------------------------------------------------------#
-
-    n_epochs = int(args.n_epochs)
+    algo = NavieLifelongAlgo(
+        dataset,
+        trainer,
+        args,
+    )
 
     wandb.init(
         project=args.wandb.project,
@@ -187,9 +189,11 @@ def main(config):
         config=args,
     )
 
-    for i in range(n_epochs):
-        print(f'Epoch {i} / {n_epochs} | {args.savepath}')
-        trainer.train()
+    for i in range(dataset.n_tasks):
+        algo.learn_one_task(i)
+
+        ## eval code
+
 
 if __name__ == "__main__":
     main()

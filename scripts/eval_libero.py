@@ -15,6 +15,9 @@ import pickle
 import numpy as np
 import random
 from loguru import logger
+import imageio.v3 as imageio
+
+DEBUG_DIR = Path("/home/tiger/myplan/tmp")
 
 def set_seed(seed):
     torch.manual_seed(seed)
@@ -27,6 +30,7 @@ def main(cfg):
     args = cfg.params
     output_dir = args.output_dir
     path = Path(output_dir)
+    file_name = args.pt_name if hasattr(args, "pt_name") else None
     seed = args.seed if hasattr(args, "seed") else 0
     set_seed(seed)
     logger.info(f"Evaluating on seed: {seed}")
@@ -38,9 +42,12 @@ def main(cfg):
     with open(path / "diffusion_config.pkl", "rb") as f:
         diffusion_config = pickle.load(f)
 
-    state_paths = list(path.glob("state_*.pt"))
-    state_paths.sort(key=lambda x: int(x.stem.split("_")[-1]))
-    newest_state_path = state_paths[-1]
+    if file_name is None:
+        state_paths = list(path.glob("state_*.pt"))
+        state_paths.sort(key=lambda x: int(x.stem.split("_")[-1]))
+        newest_state_path = state_paths[-1]
+    else:
+        newest_state_path = path / file_name
 
     dataset = dataset_config()
     model = model_config()
@@ -58,7 +65,7 @@ def main(cfg):
     os.makedirs("./eval_videos", exist_ok=True)
     for i, images_i in enumerate(images):
         for k,v in images_i.items():
-            imageio.mimsave(f"./eval_videos/{k}_video_{i}.mp4", v, fps=30)
+            imageio.imwrite(f"./eval_videos/{k}_video_{i}.mp4", np.uint8(255*v), fps=30)
     pickle.dump(info, open(f"./eval_info.pkl", "wb"))
     logger.info(f"actions_navie_mse: {actions_navie_mse}")
     logger.info(f"success_rate: {success_rate}")

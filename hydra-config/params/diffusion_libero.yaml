@@ -44,18 +44,20 @@ freeze_image_encoder: true
 # exp_name: ${exp_name}
 
 # training
-n_steps_per_epoch: 10000
+n_epochs: 6400
 loss_type: l2
-n_train_steps: 1000000
-batch_size: 32
+batch_size: 128
+train_dataset_workers: 8
 learning_rate: 0.0002
-gradient_accumulate_every: 2
 ema_decay: 0.995
-save_freq: 1000
-sample_freq: 10000
+save_freq: 5000
+sample_freq: 5000
 n_saves: 5
 save_parallel: false
 n_reference: 8
+## lr_scheduler
+lr_scheduler: cosine
+num_warmup_steps: 1000
 bucket: null
 device: cuda
 seed: 0
@@ -69,7 +71,7 @@ eval_config:
   use_mp: false
   img_h: 128
   img_w: 128
-  num_procs: 1
+  num_procs: 10
   max_steps: 600
   bddl_root_folder: "/home/tiger/myplan/libero/LIBERO/libero/libero/bddl_files"
   init_files_folder: "/home/tiger/myplan/libero/LIBERO/libero/libero/init_files"

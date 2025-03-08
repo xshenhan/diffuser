@@ -5,3 +5,4 @@ params:
   savepath: ./save_dir
   dataset: libero_spatial
   single_task: true
+gpu: 0
