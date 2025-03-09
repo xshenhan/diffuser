@@ -252,7 +252,7 @@ class ValueDiffusion(GaussianDiffusion):
 class GaussianDiffusionImage(nn.Module):
     def __init__(self, model, horizon, observation_dim, action_dim, n_timesteps=1000,
         loss_type='l1', clip_denoised=False, predict_epsilon=True, image_encoder_loss_weight=1.0,
-        action_weight=1.0, loss_discount=1.0, loss_weights=None,
+        action_weight=1.0, loss_discount=1.0, loss_weights=None, diffusion_loss_not_to_encoder=False,
     ):
         super().__init__()
         # temp: mse loss only for ae
@@ -301,6 +301,7 @@ class GaussianDiffusionImage(nn.Module):
         ## get loss coefficients and initialize objective
         loss_weights = self.get_loss_weights(action_weight, loss_discount, loss_weights)
         self.loss_fn = Losses[loss_type](loss_weights, self.action_dim)
+        self.diffusion_loss_not_to_encoder = diffusion_loss_not_to_encoder
 
     def get_loss_weights(self, action_weight, discount, weights_dict):
         '''
@@ -475,7 +476,11 @@ class GaussianDiffusionImage(nn.Module):
         image_encoder_loss = self.get_image_encoder_loss(data)
         batch_size = len(data["actions"])
         t = torch.randint(0, self.n_timesteps, (batch_size,), device=self.device).long()
-        diffusion_obs = self.get_diffusion_obs(data)
+        if self.diffusion_loss_not_to_encoder:
+            with torch.no_grad():
+                diffusion_obs = self.get_diffusion_obs(data)
+        else:
+            diffusion_obs = self.get_diffusion_obs(data)
         actions = data["actions"]
         trajectories = torch.cat([diffusion_obs, actions], dim=-1)
         cond = self.get_conditions(diffusion_obs)
@@ -497,3 +502,6 @@ class GaussianDiffusionImageTaskEmb(GaussianDiffusionImage):
             action_weight, loss_discount, loss_weights,
         )
         
+
+    def loss(self, data):
+        super().loss(data)

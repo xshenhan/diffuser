@@ -120,6 +120,7 @@ def main(config):
         clip_denoised=args.clip_denoised,
         predict_epsilon=args.predict_epsilon,
         image_encoder_loss_weight=args.image_encoder_loss_weight,
+        diffusion_loss_not_to_encoder=args.diffusion_loss_not_to_encoder,
         ## loss weighting
         action_weight=args.action_weight,
         loss_weights=args.loss_weights,
