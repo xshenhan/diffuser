@@ -15,27 +15,38 @@ def get_diffusion_conditions(diffusion, data):
     conditions = diffusion.get_conditions(diffusion_obs)
     return conditions
 
-def plan(diffusion, conditions, device="cuda", n_samples=10):
+def plan(diffusion, conditions, task_embedding, device="cuda", n_samples=1):
+    assert n_samples == 1
     conditions = TensorUtils.to_torch(conditions, device)
-    conditions = TensorUtils.map_tensor(
-        conditions,
-        lambda x: einops.repeat(x, 'b d -> (repeat b) d', repeat=n_samples),
-    )
-    samples = diffusion(conditions)
-    trajectories = samples.trajectories    
+    if isinstance(conditions, dict):
+        conditions = TensorUtils.map_tensor(
+            conditions,
+            lambda x: einops.repeat(x, 'b d -> (repeat b) d', repeat=n_samples),
+        )
+    else:
+        conditions = TensorUtils.map_tensor(
+            conditions,
+            lambda x: einops.repeat(x, 'b t d -> (repeat b) t d', repeat=n_samples),
+        )
+    samples = diffusion(conditions, task_embedding)
+    trajectories = samples.trajectories
+    # if not isinstance(trajectories, dict):
+    #     trajectories = einops.rearrange(trajectories, '(repeat b) t h -> repeat b t h', repeat=n_samples)
     return trajectories
 
 def get_actions(diffusion, data, action_dim=None, n_samples=1):
     if action_dim is None:
         action_dim = data["actions"].shape[-1]
     conditions = get_diffusion_conditions(diffusion, data)
-    trajectories = plan(diffusion, conditions, device="cuda", n_samples=n_samples)
+    task_embedding = data["task_emb"]
+    trajectories = plan(diffusion, conditions, task_embedding, device="cuda", n_samples=n_samples)
     actions = trajectories[:, :, -action_dim:]
     return actions
 
 def navie_action_mse(diffusion, data, n_samples=1):
     conditions = get_diffusion_conditions(diffusion, data)
-    trajectories = plan(diffusion, conditions, device="cuda", n_samples=n_samples)
+    task_embedding = data["task_emb"]   
+    trajectories = plan(diffusion, conditions, task_embedding, device="cuda", n_samples=n_samples)
     actions_gt = data["actions"]
     actions_pred = trajectories[:, :, -data["actions"].shape[-1]:]
     actions_navie_mse = torch.nn.functional.mse_loss(actions_pred, actions_gt)

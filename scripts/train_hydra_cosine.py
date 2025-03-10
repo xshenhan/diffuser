@@ -84,6 +84,12 @@ def main(config):
     #-----------------------------------------------------------------------------#
 
     if hasattr(args, 'dataset_type') and args.dataset_type == 'libero':
+        if not hasattr(args, "channel_dim") or args.channel_dim is None:
+            channel_dim = 32
+        elif args.channel_dim == "auto":
+            channel_dim = (action_dim + observation_dim) // 8 * 8
+        elif isinstance(args.channel_dim, int):
+            channel_dim = args.channel_dim
         model_config = utils.Config(
             args.model,
             savepath=(args.savepath, 'model_config.pkl'),
@@ -95,7 +101,8 @@ def main(config):
             dim_mults=args.dim_mults,
             attention=args.attention,
             device=args.device,
-        )        
+            dim=channel_dim,
+        )
     else:
         model_config = utils.Config(
             args.model,

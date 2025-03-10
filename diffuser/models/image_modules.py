@@ -51,3 +51,18 @@ class AutoEncoder(nn.Module):
     def num_channels(self):
         "for compatibility with other models"
         return self.hidden_dim
+
+class MLP(nn.Module):
+    def __init__(self, input_dim, hidden_dims, output_dim):
+        super(MLP, self).__init__()
+        layers = []
+        last_dim = input_dim
+        for hidden_dim in hidden_dims:
+            layers.append(nn.Linear(last_dim, hidden_dim))
+            layers.append(nn.ReLU())
+            last_dim = hidden_dim
+        layers.append(nn.Linear(last_dim, output_dim))
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.net(x)

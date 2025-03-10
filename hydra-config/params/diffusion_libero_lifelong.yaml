@@ -1,12 +1,13 @@
 # model
-model: models.TemporalUnetImage
-diffusion: models.GaussianDiffusionImageTaskEmb
+model: models.TemporalUnetImageTaskEmb
+diffusion: models.GaussianDiffusionImageTaskEmbDirectConcat
 horizon: 32
 n_diffusion_steps: 20
 action_weight: 10
 loss_weights: null
 loss_discount: 1
 predict_epsilon: false
+channel_dim: 128
 dim_mults: [1, 2, 4, 8]
 attention: false
 renderer: utils.EmptyRenderer
@@ -46,7 +47,7 @@ freeze_image_encoder: true
 # training
 n_epochs: 6400
 loss_type: l2
-batch_size: 8
+batch_size: 2
 train_dataset_workers: 8
 learning_rate: 0.0002
 ema_decay: 0.995
