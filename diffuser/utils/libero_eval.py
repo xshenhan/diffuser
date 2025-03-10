@@ -83,7 +83,7 @@ def raw_obs_to_tensor_obs(obs, cfg, obs_modality, obs_key_mapping, device="cuda"
     data = TensorUtils.to_device(data, device=device)
     return data
 
-def eval_one_task_success(diffusion, task, eval_cfg: EvalConfigDiffuser, task_str="", device="cuda") -> Tuple[float, Dict]:
+def eval_one_task_success(diffusion, task, eval_cfg: EvalConfigDiffuser, task_str="", device="cuda", task_emb=None) -> Tuple[float, Dict]:
     num_eval = eval_cfg.n_eval
     query_freq = eval_cfg.query_freq
     if not hasattr(eval_cfg, "num_procs"):
@@ -126,7 +126,7 @@ def eval_one_task_success(diffusion, task, eval_cfg: EvalConfigDiffuser, task_st
     init_states_path = os.path.join(
         eval_cfg.init_files_folder, task.problem_folder, task.init_states_file
     )
-    init_states = torch.load(init_states_path)
+    init_states = torch.load(init_states_path, weights_only=False)
     num_success = 0
     images = [{} for _ in range(num_eval)]
     sim_states = [[] for _ in range(num_eval)]
@@ -146,6 +146,7 @@ def eval_one_task_success(diffusion, task, eval_cfg: EvalConfigDiffuser, task_st
             steps += 1
 
             data = raw_obs_to_tensor_obs(obs, eval_cfg, eval_cfg.modality, eval_cfg.obs_key_mapping, device)
+            data["task_emb"] = task_emb.repeat(env_num, 1)
             data = TensorUtils.map_tensor(data, lambda x: x.unsqueeze_(1))
             
             # append_images

@@ -60,7 +60,8 @@ def main(cfg):
     data = TensorUtils.to_torch(data, device="cuda")
     actions_navie_mse = navie_action_mse(diffusion, data)
     task = dataset.benchmark.get_task(0)
-    success_rate, info = eval_one_task_success(diffusion, task, args.eval_config)
+    task_emb = dataset.benchmark.get_task_emb(0)
+    success_rate, info = eval_one_task_success(diffusion, task, args.eval_config, task_emb=task_emb)
     images = info["images"]
     os.makedirs("./eval_videos", exist_ok=True)
     for i, images_i in enumerate(images):

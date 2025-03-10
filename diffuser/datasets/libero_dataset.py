@@ -163,6 +163,7 @@ class LiberoDataset(torch.utils.data.Dataset):
             datasets.append(task_i_dataset)
 
         task_embs = get_task_embs(task_embedding_format, descriptions, task_embedding_one_hot_offset, data_max_word_len)
+        benchmark.set_task_embs(task_embs)
         self.n_tasks = n_tasks
         self.datasets = [SequenceVLDataset(ds, emb) for (ds, emb) in zip(datasets, task_embs)]
         self.n_demos = [data.n_demos for data in datasets]

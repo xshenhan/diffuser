@@ -155,7 +155,7 @@ class Trainer(object):
 
             if self.sample_freq and self.step % self.sample_freq == 0 and (self.step != 0 or DEBUG):
                 if self.libero:
-                    success_rate, info = eval_one_task_success(self.ema_model, self.dataset.benchmark.get_task(0), self.eval_cfg)
+                    success_rate, info = eval_one_task_success(self.ema_model, self.dataset.benchmark.get_task(0), self.eval_cfg, task_emb=self.dataset.benchmark.get_task_emb(0))
                     wandb_to_log["ema_success_rate"] = success_rate
                     images = info["images"]
                     os.makedirs("./ema_eval_videos", exist_ok=True)
@@ -165,7 +165,7 @@ class Trainer(object):
                     for k in images[0].keys():
                         wandb_to_log[f"ema_eval_videos/{self.step}_step_{k}_video_0"] = wandb.Video(f"./ema_eval_videos/{self.step}_step_{k}_video_0.mp4")
 
-                    success_rate, info = eval_one_task_success(self.model, self.dataset.benchmark.get_task(0), self.eval_cfg)
+                    success_rate, info = eval_one_task_success(self.model, self.dataset.benchmark.get_task(0), self.eval_cfg, task_emb=self.dataset.benchmark.get_task_emb(0))
                     wandb_to_log["success_rate"] = success_rate
                     images = info["images"]
                     os.makedirs("./eval_videos", exist_ok=True)
