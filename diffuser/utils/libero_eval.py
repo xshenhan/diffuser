@@ -28,7 +28,7 @@ def plan(diffusion, conditions, task_embedding, device="cuda", n_samples=1):
             conditions,
             lambda x: einops.repeat(x, 'b t d -> (repeat b) t d', repeat=n_samples),
         )
-    samples = diffusion(conditions, task_embedding)
+    samples = diffusion(conditions, task_embedding=task_embedding)
     trajectories = samples.trajectories
     # if not isinstance(trajectories, dict):
     #     trajectories = einops.rearrange(trajectories, '(repeat b) t h -> repeat b t h', repeat=n_samples)

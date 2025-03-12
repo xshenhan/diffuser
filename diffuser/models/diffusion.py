@@ -18,7 +18,7 @@ Sample = namedtuple('Sample', 'trajectories values chains')
 
 
 @torch.no_grad()
-def default_sample_fn(model, x, cond, t):
+def default_sample_fn(model, x, cond, t, **kwargs):
     model_mean, _, model_log_variance = model.p_mean_variance(x=x, cond=cond, t=t)
     model_std = torch.exp(0.5 * model_log_variance)
 
@@ -369,7 +369,7 @@ class GaussianDiffusionImage(nn.Module):
         return model_mean, posterior_variance, posterior_log_variance
 
     @torch.no_grad()
-    def p_sample_loop(self, shape, cond, verbose=True, return_chain=False, sample_fn=default_sample_fn, **sample_kwargs):
+    def p_sample_loop(self, shape, cond, verbose=False, return_chain=False, sample_fn=default_sample_fn, **sample_kwargs):
         device = self.betas.device
 
         batch_size = shape[0]
@@ -627,7 +627,7 @@ class GaussianDiffusionImageTaskEmbDirectConcat(nn.Module):
         return model_mean, posterior_variance, posterior_log_variance
 
     @torch.no_grad()
-    def p_sample_loop(self, shape, cond, verbose=True, return_chain=False, sample_fn=default_sample_fn, task_embedding=None, **sample_kwargs):
+    def p_sample_loop(self, shape, cond, verbose=False, return_chain=False, sample_fn=default_sample_fn, task_embedding=None, **sample_kwargs):
         device = self.betas.device
 
         batch_size = shape[0]
