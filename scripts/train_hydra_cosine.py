@@ -200,7 +200,6 @@ def main(config):
 
     wandb.init(
         project=args.wandb.project,
-        entity=args.wandb.entity,
         name=args.wandb.name,
         config=args,
     )

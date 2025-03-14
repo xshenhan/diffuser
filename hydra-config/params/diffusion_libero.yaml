@@ -14,6 +14,7 @@ image_encoder_config:
   _target_: diffuser.models.image_modules.AutoEncoder
   hidden_dim: 256
 image_encoder_loss_weight: 1.0
+diffusion_loss_not_to_encoder: false
 
 # dataset
 dataset_type: libero
@@ -62,8 +63,7 @@ bucket: null
 device: cuda
 seed: 0
 wandb:
-  project: libero
-  entity: hxs001
+  project: plan-hxs
   name: diffuser-origin-libero
 eval_config:
   n_eval: 10

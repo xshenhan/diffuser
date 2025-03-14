@@ -63,8 +63,7 @@ bucket: null
 device: cuda
 seed: 0
 wandb:
-  project: libero
-  entity: hxs001
+  project: plan-hxs
   name: diffuser-origin-libero
 eval_config:
   n_eval: 10
